@@ -17,11 +17,11 @@
 /*
  * config
  */
-#define VERSION 	    "0.0.0"
+#define VERSION 	    "0.5.0"
 
 #define MAX_LINE	    128     // max chars per lines
 #define MAX_ERRORS	    8	    // error count abort
-#define MAX_LABELS	    256     // label table size
+#define MAX_LABELS	    512     // label table size
 #define MAX_CHAR_LABEL	    22	    // significative label chars
 #define OUTPUT_LINE_BYTES   32	    // bytes per line in intel hex output
 
@@ -433,9 +433,11 @@ enum {
     OP_BEQ, OP_BLE, OP_BLEI, OP_BLT, OP_BLTI,
     OP_BNE, OP_BNZ, OP_BRA, OP_BSWAP, OP_BZ,
     OP_CSETN, OP_CSETNN, OP_CSETNP, OP_CSETNZ, OP_CSETP, OP_CSETZ,
-    OP_ENTER, OP_ERET, OP_GET, OP_ILL, OP_IN, OP_IRET, OP_ISTAT, OP_JAL, OP_JMP,
+    OP_DIV, OP_ENTER, OP_ERET, OP_GET,
+    OP_IDIV, OP_ILL, OP_IMUL, OP_IN, OP_IRET, OP_ISTAT,
+    OP_JAL, OP_JMP,
     OP_LD1, OP_LD1I, OP_LD2, OP_LD2I, OP_LD4, OP_LD4I, OP_LD8,
-    OP_LEA, OP_LI,  OP_MV, OP_NOP, OP_OR, OP_OUT, OP_RET, OP_SET,
+    OP_LEA, OP_LI,  OP_MV, OP_MUL, OP_NOP, OP_OR, OP_OUT, OP_RET, OP_SET,
     OP_SEXT1, OP_SEXT2, OP_SEXT4,
     OP_SHL, OP_SHR, OP_SHRI, OP_SIGNAL, OP_SRET,
     OP_ST1, OP_ST2, OP_ST4, OP_ST8,
@@ -465,10 +467,13 @@ static struct {
     {"CSETNZ",	    OP_CSETNZ	},
     {"CSETP",	    OP_CSETP	},
     {"CSETZ",	    OP_CSETZ	},
+    {"DIV",	    OP_DIV	},
     {"ENTER",	    OP_ENTER	},
     {"ERET",	    OP_ERET	},
     {"GET",	    OP_GET	},
+    {"IDIV",	    OP_IDIV	},
     {"ILLEGAL",     OP_ILL	},
+    {"IMUL",	    OP_IMUL	},
     {"IN",	    OP_IN	},
     {"IRET",	    OP_IRET	},
     {"ISTAT",	    OP_ISTAT	},
@@ -483,6 +488,7 @@ static struct {
     {"LD8",	    OP_LD8	},
     {"LEA",	    OP_LEA	},
     {"LI",	    OP_LI	},
+    {"MUL",	    OP_MUL	},
     {"MV",	    OP_MV	},
     {"NOP",	    OP_NOP	},
     {"OR",	    OP_OR	},
@@ -576,10 +582,22 @@ static struct tentry_t tmatch[] = {
     {OP_CSETP,	1,  {R, _, _},	    'u', 0x000c },
     {OP_CSETZ,	2,  {R, R, _},	    'U', 0x0008 },
     {OP_CSETZ,	1,  {R, _, _},	    'u', 0x0008 },
+    {OP_DIV,	3,  {R, R, R},	    'R', 0x7000 },
+    {OP_DIV,	3,  {R, R, N},	    'A', 0x3007 },
+    {OP_DIV,	2,  {R, N, _},	    'a', 0x3007 },
+    {OP_DIV,	2,  {R, R, _},	    'r', 0x7000 },
     {OP_ENTER,	1,  {N, _, _},	    'E', 0x0ff8 },
     {OP_ERET,	0,  {_, _, _},	    'N', 0x0ff6 },
     {OP_GET,	2,  {R, N, _},	    'G', 0x0f08 },
+    {OP_IDIV,	3,  {R, R, R},	    'R', 0xf000 },
+    {OP_IDIV,	3,  {R, R, N},	    'A', 0x300f },
+    {OP_IDIV,	2,  {R, N, _},	    'a', 0x300f },
+    {OP_IDIV,	2,  {R, R, _},	    'r', 0xf000 },
     {OP_ILL,	0,  {_, _, _},	    'N', 0x0ff0 },
+    {OP_IMUL,	3,  {R, R, R},	    'R', 0xe000 },
+    {OP_IMUL,	3,  {R, R, N},	    'A', 0x300e },
+    {OP_IMUL,	2,  {R, N, _},	    'a', 0x300e },
+    {OP_IMUL,	2,  {R, R, _},	    'r', 0xe000 },
     {OP_IN,	2,  {R, R, _},	    'U', 0x000e },
     {OP_IRET,	0,  {_, _, _},	    'N', 0x0ff4 },
     {OP_ISTAT,	1,  {R, _, _},	    '1', 0x0f04 },
@@ -597,6 +615,10 @@ static struct tentry_t tmatch[] = {
     {OP_LEA,	2,  {R, N, _},	    'L', 0x0f0d },
     {OP_LEA,	2,  {R, M, _},	    'l', 0x0f0a },
     {OP_LI,	2,  {R, N, _},	    'I', 0x0f0c },
+    {OP_MUL,	3,  {R, R, R},	    'R', 0x6000 },
+    {OP_MUL,	3,  {R, R, N},	    'A', 0x3006 },
+    {OP_MUL,	2,  {R, N, _},	    'a', 0x3006 },
+    {OP_MUL,	2,  {R, R, _},	    'r', 0x6000 },
     {OP_MV,	2,  {R, R, _},	    '=', 0x90f0 },
     {OP_NOP,	0,  {_, _, _},	    'N', 0x0ff1 },
     {OP_OR,	3,  {R, R, R},	    'R', 0x9000 },
@@ -671,7 +693,8 @@ static unsigned assemble (int fd, unsigned pass, bool out, unsigned pc, bool lis
     static uint8_t  code[MAX_LINE];
     uint32_t lineno = 0;
     label_t mainlbl = NULL;
-    while (readline (fd, buffer, sizeof (buffer), ++lineno)) {
+    bool    ended   = false;
+    while (!ended && readline (fd, buffer, sizeof (buffer), ++lineno)) {
 	uint8_t *p = buffer;
 
 	// line bytes
@@ -737,6 +760,8 @@ static unsigned assemble (int fd, unsigned pass, bool out, unsigned pc, bool lis
 		p	= vp.p; if (!p) continue;
 		bytes	= vp.v - pc;
 		org	= true;
+	    } else if (!strcmp (tmp, "END")) {
+		ended	= true;
 	    } else if (!strcmp (tmp, "EQU")) {
 		vp_t vp = expr (lineno, mainlbl, false, pc, p);
 		p	= vp.p; if (!p) continue;
@@ -748,11 +773,16 @@ static unsigned assemble (int fd, unsigned pass, bool out, unsigned pc, bool lis
 		    error (lineno, ".EQU without label");
 		    continue;
 		}
-	    } else if (!strcmp (tmp, "ZERO")) {
+	    } else if (!strcmp (tmp, "ZERO") || !strcmp (tmp, "ALIGN")) {
+		bool align = tmp[0] == 'A';
 		vp_t vp = expr (lineno, mainlbl, false, pc, p);
 		p	= vp.p; if (!p) continue;
+		if (align) {
+		    unsigned mask = vp.v - 1;
+		    vp.v	  = (vp.v - (pc & mask)) & mask;
+		}
 		if (vp.v > sizeof (code)) {
-		    error (lineno, ".ZERO size overflow");
+		    error (lineno, ".ZERO/.ALIGN size overflow");
 		    continue;
 		}
 		for (unsigned n = 0; n < vp.v; n++)
@@ -786,14 +816,19 @@ static unsigned assemble (int fd, unsigned pass, bool out, unsigned pc, bool lis
 		    if (*p != ',') break;
 		    ++p;
 		}
-	    } else if (!strcmp (tmp, "WORD")) {
+	    } else if (!strcmp (tmp, "WORD") || !strcmp (tmp, "LONG")) {
+		bool isword = tmp[0] == 'W';
 		for (;;) {
 		    vp_t vp = expr (lineno, mainlbl, !out, pc, p);
 		    p	    = vp.p; if (!p) goto next;
 
+		    if (!isword) {
+			code[bytes++] = vp.v >> 24;
+			code[bytes++] = vp.v >> 16;
+		    }
 		    code[bytes++] = vp.v >> 8;
 		    code[bytes++] = vp.v;
-		    if (out && vp.v > 65536) error (lineno, ".WORD overflow");
+		    if (out && isword && vp.v > 65536) error (lineno, ".WORD overflow");
 
 		    if (*p != ',') break;
 		    ++p;
