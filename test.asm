@@ -11,6 +11,7 @@ JORL23		.EQU	SALUDO + 3
 		imul	r4, r7
 		idiv	r5, r8
 .ESPERA 	nop
+		inv	r3, 1024
 		eret
 		sret
 		ret

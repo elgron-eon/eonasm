@@ -17,7 +17,7 @@
 /*
  * config
  */
-#define VERSION 	    "0.5.0"
+#define VERSION 	    "0.6.0"
 
 #define MAX_LINE	    128     // max chars per lines
 #define MAX_ERRORS	    8	    // error count abort
@@ -434,7 +434,7 @@ enum {
     OP_BNE, OP_BNZ, OP_BRA, OP_BSWAP, OP_BZ,
     OP_CSETN, OP_CSETNN, OP_CSETNP, OP_CSETNZ, OP_CSETP, OP_CSETZ,
     OP_DIV, OP_ENTER, OP_ERET, OP_GET,
-    OP_IDIV, OP_ILL, OP_IMUL, OP_IN, OP_IRET, OP_ISTAT,
+    OP_IDIV, OP_ILL, OP_IMUL, OP_IN, OP_INV, OP_IRET, OP_ISTAT,
     OP_JAL, OP_JMP,
     OP_LD1, OP_LD1I, OP_LD2, OP_LD2I, OP_LD4, OP_LD4I, OP_LD8,
     OP_LEA, OP_LI,  OP_MV, OP_MUL, OP_NOP, OP_OR, OP_OUT, OP_RET, OP_SET,
@@ -475,6 +475,7 @@ static struct {
     {"ILLEGAL",     OP_ILL	},
     {"IMUL",	    OP_IMUL	},
     {"IN",	    OP_IN	},
+    {"INV",	    OP_INV	},
     {"IRET",	    OP_IRET	},
     {"ISTAT",	    OP_ISTAT	},
     {"JAL",	    OP_JAL	},
@@ -599,6 +600,7 @@ static struct tentry_t tmatch[] = {
     {OP_IMUL,	2,  {R, N, _},	    'a', 0x300e },
     {OP_IMUL,	2,  {R, R, _},	    'r', 0xe000 },
     {OP_IN,	2,  {R, R, _},	    'U', 0x000e },
+    {OP_INV,	2,  {R, N, _},	    'v', 0x0f0b },
     {OP_IRET,	0,  {_, _, _},	    'N', 0x0ff4 },
     {OP_ISTAT,	1,  {R, _, _},	    '1', 0x0f04 },
     {OP_JAL,	1,  {N, _, _},	    'J', 0x0ffd },
@@ -1097,6 +1099,12 @@ static unsigned assemble (int fd, unsigned pass, bool out, unsigned pc, bool lis
 			va[1].val = va[0].val;
 			k	  = 'G';
 			goto again;
+		    case 'v':	// inv
+			code[bytes++] = (w >> 8);
+			code[bytes++] = (w >> 0) | (va[0].rno << 4);
+			code[bytes++] = va[1].val >> 8;
+			code[bytes++] = va[1].val;
+			break;
 		    default:
 			//printf ("type %c\t%s\n", te->type, te->pattern);
 			error (lineno, "opcode type");

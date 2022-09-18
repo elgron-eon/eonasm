@@ -1,7 +1,7 @@
 # eonasm
 eonasm is a classical multipass assembler for [EON](https://github.com/elgron-eon/eon-cpu) cpu.
-It can generate listing file and support local labels (prefixed with '.'). Doesn't need a linker (
-aka classical assembler which produces binary image directly).
+It can generate listing file and support local labels (prefixed with '.'). Doesn't need a
+linker (aka classical assembler which produces binary image directly).
 
 # usage
 ```
